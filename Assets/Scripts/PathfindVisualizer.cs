@@ -23,19 +23,16 @@ public class PathfindVisualizer : MonoBehaviour
     private Material wallMat;
     private Material frontierMat;
     private Material visitedMat;
-    private Material pathMat;
     private Material startMat;
     private Material goalMat;
 
     private Matrix4x4[] wallMatrices;
     private Matrix4x4[] frontierMatrices;
     private Matrix4x4[] visitedMatrices;
-    private Matrix4x4[] pathMatrices;
 
     private int wallCount;
     private int frontierCount;
     private int visitedCount;
-    private int pathCount;
 
     private GameObject startMarkerObj;
     private GameObject goalMarkerObj;
@@ -104,7 +101,6 @@ public class PathfindVisualizer : MonoBehaviour
         wallMat = CreateTransparentMaterial(WALL_COLOR, 2900);
         frontierMat = CreateTransparentMaterial(FRONTIER_COLOR, 3000);
         visitedMat = CreateTransparentMaterial(VISITED_COLOR, 2950);
-        pathMat = CreateTransparentMaterial(PATH_COLOR, 3050);
         startMat = CreateTransparentMaterial(START_MARKER_COLOR, 3100);
         goalMat = CreateTransparentMaterial(GOAL_MARKER_COLOR, 3100);
     }
@@ -139,10 +135,8 @@ public class PathfindVisualizer : MonoBehaviour
         int maxNodes = svoData.leafCount;
         frontierMatrices = new Matrix4x4[maxNodes];
         visitedMatrices = new Matrix4x4[maxNodes];
-        pathMatrices = new Matrix4x4[maxNodes];
         frontierCount = 0;
         visitedCount = 0;
-        pathCount = 0;
     }
 
     private void CreateMarkers()
@@ -240,7 +234,6 @@ public class PathfindVisualizer : MonoBehaviour
         RenderInstanced(wallMatrices, wallCount, wallMat, Vector3.one);
         RenderInstanced(frontierMatrices, frontierCount, frontierMat, Vector3.one * 0.9f);
         RenderInstanced(visitedMatrices, visitedCount, visitedMat, Vector3.one * 0.9f);
-        RenderInstanced(pathMatrices, pathCount, pathMat, Vector3.one * 0.95f);
     }
 
     private void RenderInstanced(Matrix4x4[] matrices, int count, Material mat, Vector3 scale)
@@ -261,24 +254,15 @@ public class PathfindVisualizer : MonoBehaviour
         }
     }
 
-    private HashSet<int> pathSet;
-
-    public void UpdateVisual(PathNode[] pathData, List<int> path, int startIdx, int goalIdx)
+    public void UpdateVisual(PathNode[] pathData, List<Vector3> waypoints, int startIdx, int goalIdx)
     {
         frontierCount = 0;
         visitedCount = 0;
-
-        pathSet = null;
-        if (path != null && path.Count > 0)
-        {
-            pathSet = new HashSet<int>(path);
-        }
 
         if (pathData != null)
         {
             for (int i = 0; i < svoData.leafCount; i++)
             {
-                if (pathSet != null && pathSet.Contains(i)) continue;
                 var ln = svoData.leafNodes[i];
                 var state = pathData[i].state;
                 Vector3 pos = new Vector3(ln.leafX + 0.5f, ln.leafY + 0.5f, ln.leafZ + 0.5f);
@@ -296,22 +280,7 @@ public class PathfindVisualizer : MonoBehaviour
             }
         }
 
-        pathCount = 0;
-        if (path != null && path.Count > 0)
-        {
-            for (int i = 0; i < path.Count; i++)
-            {
-                if (pathCount >= pathMatrices.Length) break;
-                var ln = svoData.leafNodes[path[i]];
-                pathMatrices[pathCount++] = Matrix4x4.TRS(
-                    new Vector3(ln.leafX + 0.5f, ln.leafY + 1.5f, ln.leafZ + 0.5f),
-                    Quaternion.identity,
-                    Vector3.one
-                );
-            }
-        }
-
-        UpdatePathLine(path);
+        UpdatePathLine(waypoints);
         UpdateMarkers(startIdx, goalIdx);
     }
 
@@ -340,7 +309,7 @@ public class PathfindVisualizer : MonoBehaviour
         }
     }
 
-    private void UpdatePathLine(List<int> path)
+    private void UpdatePathLine(List<Vector3> waypoints)
     {
         if (pathLineObj != null)
         {
@@ -348,20 +317,19 @@ public class PathfindVisualizer : MonoBehaviour
             pathLineObj = null;
         }
 
-        if (path == null || path.Count < 2) return;
+        if (waypoints == null || waypoints.Count < 2) return;
 
         var go = new GameObject("PathLine");
         pathLineObj = go.AddComponent<LineRenderer>();
-        pathLineObj.positionCount = path.Count;
+        pathLineObj.positionCount = waypoints.Count;
         pathLineObj.startWidth = 0.15f;
         pathLineObj.endWidth = 0.15f;
         pathLineObj.material = new Material(Shader.Find("Unlit/Color"));
         pathLineObj.material.color = PATH_COLOR;
 
-        for (int i = 0; i < path.Count; i++)
+        for (int i = 0; i < waypoints.Count; i++)
         {
-            var ln = svoData.leafNodes[path[i]];
-            pathLineObj.SetPosition(i, new Vector3(ln.leafX + 0.5f, ln.leafY + 1.5f, ln.leafZ + 0.5f));
+            pathLineObj.SetPosition(i, waypoints[i]);
         }
     }
 
@@ -401,7 +369,6 @@ public class PathfindVisualizer : MonoBehaviour
         if (wallMat != null) Object.Destroy(wallMat);
         if (frontierMat != null) Object.Destroy(frontierMat);
         if (visitedMat != null) Object.Destroy(visitedMat);
-        if (pathMat != null) Object.Destroy(pathMat);
         if (startMat != null) Object.Destroy(startMat);
         if (goalMat != null) Object.Destroy(goalMat);
     }

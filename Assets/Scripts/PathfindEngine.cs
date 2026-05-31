@@ -35,6 +35,7 @@ public class PathfindEngine
     private bool goalReached;
 
     private SVOBuilder.SVOData svoData;
+    private int wallLayerMask;
 
     private enum EngineState { Idle, Dispatched, GoalReadbackPending, PathReadbackPending }
     private EngineState state = EngineState.Idle;
@@ -56,8 +57,9 @@ public class PathfindEngine
     public SVOBuilder.SVOData SVOData => svoData;
     public bool IsBusy => state != EngineState.Idle;
 
-    public void Init(ComputeShader shader, SVOBuilder.SVOData data)
+    public void Init(ComputeShader shader, SVOBuilder.SVOData data, int wallLayerMask = -1)
     {
+        this.wallLayerMask = wallLayerMask;
         computeShader = shader;
         svoData = data;
         nodeCount = data.leafCount;
@@ -225,6 +227,75 @@ public class PathfindEngine
 
         path.Reverse();
         return path;
+    }
+
+    public List<Vector3> ComputeWaypoints(List<int> path)
+    {
+        if (path == null || path.Count == 0) return null;
+
+        var waypoints = new List<Vector3>();
+        var leafNodes = svoData.leafNodes;
+
+        waypoints.Add(new Vector3(
+            leafNodes[path[0]].leafX + 0.5f,
+            leafNodes[path[0]].leafY + 0.5f,
+            leafNodes[path[0]].leafZ + 0.5f));
+
+        for (int i = 0; i < path.Count - 1; i++)
+        {
+            var a = leafNodes[path[i]];
+            var b = leafNodes[path[i + 1]];
+            waypoints.Add(new Vector3(
+                (a.leafX + b.leafX) / 2f + 0.5f,
+                (a.leafY + b.leafY) / 2f + 0.5f,
+                (a.leafZ + b.leafZ) / 2f + 0.5f));
+        }
+
+        waypoints.Add(new Vector3(
+            leafNodes[path[path.Count - 1]].leafX + 0.5f,
+            leafNodes[path[path.Count - 1]].leafY + 0.5f,
+            leafNodes[path[path.Count - 1]].leafZ + 0.5f));
+
+        return waypoints;
+    }
+
+    public List<Vector3> SmoothPath(List<Vector3> waypoints)
+    {
+        if (waypoints == null || waypoints.Count <= 2) return waypoints;
+
+        var result = new List<Vector3> { waypoints[0] };
+        int current = 0;
+
+        while (current < waypoints.Count - 1)
+        {
+            int farthest = current + 1;
+            for (int candidate = waypoints.Count - 1; candidate > current + 1; candidate--)
+            {
+                if (IsLineClear(waypoints[current], waypoints[candidate]))
+                {
+                    farthest = candidate;
+                    break;
+                }
+            }
+            result.Add(waypoints[farthest]);
+            current = farthest;
+        }
+
+        return result;
+    }
+
+    private bool IsLineClear(Vector3 from, Vector3 to)
+    {
+        const float radius = 0.5f;
+
+        if (Physics.CheckSphere(from, radius, wallLayerMask)) return false;
+        if (Physics.CheckSphere(to, radius, wallLayerMask)) return false;
+
+        Vector3 dir = to - from;
+        float dist = dir.magnitude;
+        if (dist < 0.001f) return true;
+
+        return !Physics.SphereCast(new Ray(from, dir.normalized), radius, dist, wallLayerMask);
     }
 
     public void Dispose()
