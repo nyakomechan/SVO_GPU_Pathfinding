@@ -9,6 +9,7 @@ public class PathfindDemo : MonoBehaviour
 
     public int gridSize = 16;
     public int itersPerFrame = 8;
+    public float heightFactor = 0.2f;
 
     private SVOBuilder svoBuilder;
     private SVOBuilder.SVOData svoData;
@@ -82,7 +83,7 @@ public class PathfindDemo : MonoBehaviour
                 for (int x = 0; x < gridSize; x++)
                     svoBuilder.SetVoxel(x, y, z, grid[x + y * gridSize + z * gridSize * gridSize] != 0);
 
-        svoData = svoBuilder.Build();
+        svoData = svoBuilder.Build(heightFactor);
         Debug.Log($"SVO built: {svoData.leafCount} leaf nodes, {svoData.nodes.Count} total nodes");
 
         if (svoData.leafCount == 0)

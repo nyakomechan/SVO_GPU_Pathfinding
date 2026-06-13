@@ -26,6 +26,7 @@ public class PathfindEngine
     private ComputeBuffer pathDataA;
     private ComputeBuffer pathDataB;
     private ComputeBuffer goalResultBuf;
+    private ComputeBuffer costBuf;
 
     private int nodeCount;
     private int startIdx = -1;
@@ -50,6 +51,7 @@ public class PathfindEngine
     private static readonly int PATH_DATA_IN = Shader.PropertyToID("pathDataIn");
     private static readonly int PATH_DATA_OUT = Shader.PropertyToID("pathDataOut");
     private static readonly int GOAL_RESULT = Shader.PropertyToID("goalResult");
+    private static readonly int LEAF_COSTS = Shader.PropertyToID("leafCosts");
 
     public int Iteration => iteration;
     public bool GoalReached => goalReached;
@@ -86,6 +88,9 @@ public class PathfindEngine
         }
         neighborBuf.SetData(neighborArr);
 
+        costBuf = new ComputeBuffer(nodeCount, 4);
+        costBuf.SetData(data.leafCosts);
+
         int pathNodeStride = System.Runtime.InteropServices.Marshal.SizeOf(typeof(PathNode));
         pathDataA = new ComputeBuffer(nodeCount, pathNodeStride);
         pathDataB = new ComputeBuffer(nodeCount, pathNodeStride);
@@ -93,6 +98,7 @@ public class PathfindEngine
         goalResultBuf = new ComputeBuffer(1, 4);
 
         computeShader.SetBuffer(kernelWavefront, NEIGHBORS, neighborBuf);
+        computeShader.SetBuffer(kernelWavefront, LEAF_COSTS, costBuf);
         computeShader.SetInt(NODE_COUNT, nodeCount);
 
         state = EngineState.Idle;
@@ -304,5 +310,6 @@ public class PathfindEngine
         pathDataA?.Dispose();
         pathDataB?.Dispose();
         goalResultBuf?.Dispose();
+        costBuf?.Dispose();
     }
 }

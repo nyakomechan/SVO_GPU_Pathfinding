@@ -21,6 +21,7 @@ struct NeighborData
 };
 
 StructuredBuffer<NeighborData> neighbors;
+StructuredBuffer<float> leafCosts;
 StructuredBuffer<PathNode> pathDataIn;
 RWStructuredBuffer<PathNode> pathDataOut;
 RWStructuredBuffer<int> goalResult;
@@ -64,7 +65,7 @@ void WavefrontExpand (uint3 id : SV_DispatchThreadID)
         if (nIdx < 0) continue;
         PathNode nd = pathDataIn[nIdx];
         if (nd.state != STATE_FRONTIER) continue;
-        float newCost = nd.cost + 1.0;
+        float newCost = nd.cost + leafCosts[idx];
         if (newCost < bestCost)
         {
             bestCost = newCost;

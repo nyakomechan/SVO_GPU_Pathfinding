@@ -48,6 +48,7 @@ public class SVOBuilder
         public List<SVONode> leafNodes;
         public int[] neighbors;
         public int[] voxelToLeaf;
+        public float[] leafCosts;
         public int gridSize;
         public int leafCount;
     }
@@ -61,7 +62,7 @@ public class SVOBuilder
 
     private List<SVONode> nodes;
 
-    public SVOData Build()
+    public SVOData Build(float heightFactor = 0.0f)
     {
         int gs = gridSize;
         int maxLevel = (int)Math.Round(Math.Log(gs, 2));
@@ -105,12 +106,19 @@ public class SVOBuilder
             }
         }
 
+        var leafCosts = new float[leafNodes.Count];
+        for (int i = 0; i < leafNodes.Count; i++)
+        {
+            leafCosts[i] = 1.0f + heightFactor * leafNodes[i].leafY;
+        }
+
         return new SVOData
         {
             nodes = nodes,
             leafNodes = leafNodes,
             neighbors = neighbors,
             voxelToLeaf = voxelToLeaf,
+            leafCosts = leafCosts,
             gridSize = gs,
             leafCount = leafNodes.Count,
         };
